@@ -1,0 +1,866 @@
+{
+  "target": "artex-bankrange",
+  "base_url": "http://127.0.0.1:9900",
+  "started_at": "2026-11-19T16:50:55.753416615Z",
+  "finished_at": "2026-11-19T16:50:55.811481808Z",
+  "authorization": "ENG-DEMO-001",
+  "results": [
+    {
+      "probe": "LG-AUTHZ-READ",
+      "title": "Cross-customer account read (BOLA)",
+      "passed": false,
+      "note": "",
+      "finding": {
+        "id": "LG-AUTHZ-READ-001",
+        "probe": "LG-AUTHZ-READ",
+        "title": "Cross-customer account read (BOLA)",
+        "severity": "high",
+        "invariant": "authority",
+        "cwe": "CWE-639",
+        "summary": "Attacker session read account acc_alice_1 owned by \"alice\", including a balance of ₹2500000.00.",
+        "violations": [
+          {
+            "invariant": "authority",
+            "detail": "account object returned to a non-owner identity"
+          }
+        ],
+        "exposure_minor_inr": 0,
+        "exposure": "Customer financial data (balances, identifiers) readable across tenants",
+        "remediation": "Enforce owner/tenant check on every object lookup server-side; return 404 for foreign objects; add an authorization test per object route.",
+        "controls": [
+          {
+            "framework": "OWASP API Top 10 (2023)",
+            "ref": "API1",
+            "title": "Broken Object Level Authorization"
+          },
+          {
+            "framework": "PCI DSS v4.0",
+            "ref": "7.2",
+            "title": "Access to system components and data is appropriately defined and assigned"
+          },
+          {
+            "framework": "RBI",
+            "ref": "Cyber Security Framework for Banks (2016)",
+            "title": "Baseline application security and access controls"
+          },
+          {
+            "framework": "DPDP Act 2023",
+            "ref": "Sec 8(5)",
+            "title": "Reasonable security safeguards to prevent personal data breach"
+          }
+        ],
+        "evidence": [
+          {
+            "method": "GET",
+            "url": "http://127.0.0.1:9900/v1/accounts/acc_alice_1",
+            "identity": "attacker",
+            "status": 200,
+            "response_body": "{\"id\":\"acc_alice_1\",\"owner\":\"alice\",\"currency\":\"INR\",\"balance_minor\":250000000}",
+            "duration_ms": 0
+          }
+        ]
+      },
+      "requests": 1
+    },
+    {
+      "probe": "LG-STEPUP",
+      "title": "Step-up OTP attempt ceiling",
+      "passed": false,
+      "note": "",
+      "finding": {
+        "id": "LG-STEPUP-002",
+        "probe": "LG-STEPUP",
+        "title": "Step-up OTP attempt ceiling",
+        "severity": "high",
+        "invariant": "step_up_ceiling",
+        "cwe": "CWE-307",
+        "summary": "11 consecutive wrong OTPs were accepted for evaluation without lockout (last response HTTP 401). A 4-digit OTP space falls to ~10,000 requests.",
+        "violations": [
+          {
+            "invariant": "step_up_ceiling",
+            "detail": "no lockout after 11 failures"
+          }
+        ],
+        "exposure_minor_inr": 0,
+        "exposure": "Step-up authentication bypass on high-value actions (account takeover, beneficiary add)",
+        "remediation": "Lock the challenge after ≤5 failures, bind it to device/session, rate-limit per account and per IP, and alert on bursts.",
+        "controls": [
+          {
+            "framework": "PCI DSS v4.0",
+            "ref": "8.3.4",
+            "title": "Invalid authentication attempts are limited (lockout after not more than 10 attempts)"
+          },
+          {
+            "framework": "RBI",
+            "ref": "Master Direction on Digital Payment Security Controls (2021)",
+            "title": "Application security, transaction integrity and authentication controls for digital payment products"
+          },
+          {
+            "framework": "OWASP API Top 10 (2023)",
+            "ref": "API2",
+            "title": "Broken Authentication"
+          }
+        ],
+        "evidence": [
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/otp/challenge",
+            "identity": "attacker",
+            "request_body": "{}",
+            "status": 200,
+            "response_body": "{\"challenge_id\":\"otp_mallory_1795107055753944071\",\"delivery\":\"sms\"}",
+            "duration_ms": 0
+          },
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/otp/verify",
+            "identity": "attacker",
+            "request_body": "{\"challenge_id\":\"otp_mallory_1795107055753944071\",\"otp\":\"0013\"}",
+            "status": 401,
+            "response_body": "{\"error\":\"invalid otp\"}",
+            "duration_ms": 0
+          },
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/otp/verify",
+            "identity": "attacker",
+            "request_body": "{\"challenge_id\":\"otp_mallory_1795107055753944071\",\"otp\":\"7932\"}",
+            "status": 401,
+            "response_body": "{\"error\":\"invalid otp\"}",
+            "duration_ms": 0
+          },
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/otp/verify",
+            "identity": "attacker",
+            "request_body": "{\"challenge_id\":\"otp_mallory_1795107055753944071\",\"otp\":\"9203\"}",
+            "status": 401,
+            "response_body": "{\"error\":\"invalid otp\"}",
+            "duration_ms": 0
+          }
+        ]
+      },
+      "requests": 12
+    },
+    {
+      "probe": "LG-SIGN",
+      "title": "Negative-amount transfer pulls funds",
+      "passed": false,
+      "note": "",
+      "finding": {
+        "id": "LG-SIGN-003",
+        "probe": "LG-SIGN",
+        "title": "Negative-amount transfer pulls funds",
+        "severity": "critical",
+        "invariant": "authority",
+        "cwe": "CWE-20",
+        "summary": "A transfer of -₹1.00 from the attacker's account debited the victim by ₹1.00. Any customer balance can be drained by naming it as the destination.",
+        "violations": [
+          {
+            "invariant": "authority",
+            "detail": "victim account debited without victim's authority",
+            "currency": "INR",
+            "delta_minor": -100
+          }
+        ],
+        "exposure_minor_inr": 250000000,
+        "exposure": "Entire balance of any reachable account (victim test account alone: ₹2500000.00)",
+        "remediation": "Reject amount \u003c= 0 at the API edge and again in the posting engine; express transfers as unsigned amount + direction.",
+        "controls": [
+          {
+            "framework": "OWASP API Top 10 (2023)",
+            "ref": "API1",
+            "title": "Broken Object Level Authorization"
+          },
+          {
+            "framework": "PCI DSS v4.0",
+            "ref": "7.2",
+            "title": "Access to system components and data is appropriately defined and assigned"
+          },
+          {
+            "framework": "RBI",
+            "ref": "Cyber Security Framework for Banks (2016)",
+            "title": "Baseline application security and access controls"
+          },
+          {
+            "framework": "DPDP Act 2023",
+            "ref": "Sec 8(5)",
+            "title": "Reasonable security safeguards to prevent personal data breach"
+          }
+        ],
+        "evidence": [
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/transfers",
+            "identity": "attacker",
+            "request_body": "{\"amount_minor\":-100,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-sign-1795107055756857637\",\"to\":\"acc_alice_1\"}",
+            "status": 200,
+            "response_body": "{\"amount_minor\":-100,\"status\":\"posted\",\"txn_id\":\"txn_000001\"}",
+            "duration_ms": 15
+          }
+        ]
+      },
+      "requests": 3
+    },
+    {
+      "probe": "LG-ROUNDING",
+      "title": "FX rounding round-trip mints money",
+      "passed": false,
+      "note": "",
+      "finding": {
+        "id": "LG-ROUNDING-004",
+        "probe": "LG-ROUNDING",
+        "title": "FX rounding round-trip mints money",
+        "severity": "critical",
+        "invariant": "conservation",
+        "cwe": "CWE-682",
+        "summary": "10 INR→USD→INR round-trips of ₹0.01 created ₹8.40 that no GL absorbs (₹0.84 per trip). Rounding is applied in the customer's favour on both legs while treasury books the fair value.",
+        "violations": [
+          {
+            "invariant": "conservation",
+            "detail": "system total for INR moved by ₹0.10 with no external inflow",
+            "currency": "INR",
+            "delta_minor": 10
+          },
+          {
+            "invariant": "conservation",
+            "detail": "system total for USD moved by $0.10 with no external inflow",
+            "currency": "USD",
+            "delta_minor": 10
+          }
+        ],
+        "exposure_minor_inr": 168000000,
+        "exposure": "₹1680000.00/day if scripted at 2000000 conversions/day (salami attack)",
+        "remediation": "Round toward the bank on every leg, enforce a minimum conversion amount, book rounding residue to a dedicated GL and reconcile it daily.",
+        "controls": [
+          {
+            "framework": "PCI DSS v4.0",
+            "ref": "6.2.4",
+            "title": "Software engineering techniques prevent common attacks, including business-logic abuse via API manipulation"
+          },
+          {
+            "framework": "RBI",
+            "ref": "Master Direction on IT Governance, Risk, Controls \u0026 Assurance (2023)",
+            "title": "Application controls for data integrity, reconciliation and audit trails"
+          },
+          {
+            "framework": "RBI",
+            "ref": "Master Direction on Digital Payment Security Controls (2021)",
+            "title": "Application security, transaction integrity and authentication controls for digital payment products"
+          },
+          {
+            "framework": "OWASP API Top 10 (2023)",
+            "ref": "API6",
+            "title": "Unrestricted Access to Sensitive Business Flows"
+          }
+        ],
+        "evidence": [
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/fx/convert",
+            "identity": "attacker",
+            "request_body": "{\"amount_minor\":1,\"from_account\":\"acc_mallory_1\",\"to_account\":\"acc_mallory_usd\"}",
+            "status": 200,
+            "response_body": "{\"credited_minor\":1,\"currency\":\"USD\",\"txn_id\":\"txn_000002\"}",
+            "duration_ms": 0
+          },
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/fx/convert",
+            "identity": "attacker",
+            "request_body": "{\"amount_minor\":1,\"from_account\":\"acc_mallory_usd\",\"to_account\":\"acc_mallory_1\"}",
+            "status": 200,
+            "response_body": "{\"credited_minor\":84,\"currency\":\"INR\",\"txn_id\":\"txn_000003\"}",
+            "duration_ms": 0
+          }
+        ]
+      },
+      "requests": 22
+    },
+    {
+      "probe": "LG-IDEMPOTENCY",
+      "title": "Duplicate idempotency key double-posts",
+      "passed": false,
+      "note": "",
+      "finding": {
+        "id": "LG-IDEMPOTENCY-005",
+        "probe": "LG-IDEMPOTENCY",
+        "title": "Duplicate idempotency key double-posts",
+        "severity": "high",
+        "invariant": "idempotency",
+        "cwe": "CWE-362",
+        "summary": "Two in-flight requests with idempotency key \"lg-idem-1795107055777735743\" produced 2 distinct postings. Client retries (mobile network flaps, gateway timeouts) will double-debit customers.",
+        "violations": [
+          {
+            "invariant": "idempotency",
+            "detail": "2 postings for one key",
+            "currency": "INR",
+            "delta_minor": 100
+          }
+        ],
+        "exposure_minor_inr": 100,
+        "exposure": "Every retried payment is at risk of duplicate debit; customer-harm and chargeback exposure scales with retry rate",
+        "remediation": "Reserve the idempotency key atomically (unique insert) before executing, scope it to the caller, and bind it to a hash of the payload.",
+        "controls": [
+          {
+            "framework": "PCI DSS v4.0",
+            "ref": "6.2.4",
+            "title": "Software engineering techniques prevent common attacks, including business-logic abuse via API manipulation"
+          },
+          {
+            "framework": "RBI",
+            "ref": "Master Direction on Digital Payment Security Controls (2021)",
+            "title": "Application security, transaction integrity and authentication controls for digital payment products"
+          },
+          {
+            "framework": "RBI",
+            "ref": "Master Direction on IT Governance, Risk, Controls \u0026 Assurance (2023)",
+            "title": "Application controls for data integrity, reconciliation and audit trails"
+          },
+          {
+            "framework": "OWASP API Top 10 (2023)",
+            "ref": "API6",
+            "title": "Unrestricted Access to Sensitive Business Flows"
+          }
+        ],
+        "evidence": [
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/transfers",
+            "identity": "attacker",
+            "request_body": "{\"amount_minor\":100,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-idem-1795107055777735743\",\"to\":\"acc_mallory_2\"}",
+            "status": 200,
+            "response_body": "{\"amount_minor\":100,\"status\":\"posted\",\"txn_id\":\"txn_000023\"}",
+            "duration_ms": 16
+          },
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/transfers",
+            "identity": "attacker",
+            "request_body": "{\"amount_minor\":100,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-idem-1795107055777735743\",\"to\":\"acc_mallory_2\"}",
+            "status": 200,
+            "response_body": "{\"amount_minor\":100,\"status\":\"posted\",\"txn_id\":\"txn_000022\"}",
+            "duration_ms": 16
+          }
+        ]
+      },
+      "requests": 3
+    },
+    {
+      "probe": "LG-DOUBLESPEND",
+      "title": "Concurrent transfers overdraw the source",
+      "passed": false,
+      "note": "",
+      "finding": {
+        "id": "LG-DOUBLESPEND-006",
+        "probe": "LG-DOUBLESPEND",
+        "title": "Concurrent transfers overdraw the source",
+        "severity": "critical",
+        "invariant": "non_negative",
+        "cwe": "CWE-362",
+        "summary": "6 of 6 concurrent transfers of the full balance (₹1007.30) posted. The source ended at -₹5036.50: the balance check and the debit are not atomic.",
+        "violations": [
+          {
+            "invariant": "non_negative",
+            "detail": "account acc_mallory_1 is overdrawn at -₹5036.50 with no overdraft facility",
+            "currency": "INR",
+            "delta_minor": -503650
+          }
+        ],
+        "exposure_minor_inr": 503650,
+        "exposure": "₹5036.50 overdrawn from a ₹1007.30 balance in one burst; scales linearly with concurrency and account count",
+        "remediation": "Debit with a conditional update (UPDATE … SET bal = bal - x WHERE bal \u003e= x) or a row lock inside the posting transaction; move fraud checks before the reservation, not between check and debit.",
+        "controls": [
+          {
+            "framework": "PCI DSS v4.0",
+            "ref": "6.2.4",
+            "title": "Software engineering techniques prevent common attacks, including business-logic abuse via API manipulation"
+          },
+          {
+            "framework": "RBI",
+            "ref": "Master Direction on Digital Payment Security Controls (2021)",
+            "title": "Application security, transaction integrity and authentication controls for digital payment products"
+          },
+          {
+            "framework": "RBI",
+            "ref": "Master Direction on IT Governance, Risk, Controls \u0026 Assurance (2023)",
+            "title": "Application controls for data integrity, reconciliation and audit trails"
+          },
+          {
+            "framework": "OWASP API Top 10 (2023)",
+            "ref": "API6",
+            "title": "Unrestricted Access to Sensitive Business Flows"
+          }
+        ],
+        "evidence": [
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/transfers",
+            "identity": "attacker",
+            "request_body": "{\"amount_minor\":100730,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-race-1795107055794634620\",\"to\":\"acc_mallory_2\"}",
+            "status": 200,
+            "response_body": "{\"amount_minor\":100730,\"status\":\"posted\",\"txn_id\":\"txn_000024\"}",
+            "duration_ms": 16
+          },
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/transfers",
+            "identity": "attacker",
+            "request_body": "{\"amount_minor\":100730,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-race-1795107055794596604\",\"to\":\"acc_mallory_2\"}",
+            "status": 200,
+            "response_body": "{\"amount_minor\":100730,\"status\":\"posted\",\"txn_id\":\"txn_000025\"}",
+            "duration_ms": 16
+          },
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/transfers",
+            "identity": "attacker",
+            "request_body": "{\"amount_minor\":100730,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-race-1795107055794508464\",\"to\":\"acc_mallory_2\"}",
+            "status": 200,
+            "response_body": "{\"amount_minor\":100730,\"status\":\"posted\",\"txn_id\":\"txn_000026\"}",
+            "duration_ms": 16
+          },
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/transfers",
+            "identity": "attacker",
+            "request_body": "{\"amount_minor\":100730,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-race-1795107055794606054\",\"to\":\"acc_mallory_2\"}",
+            "status": 200,
+            "response_body": "{\"amount_minor\":100730,\"status\":\"posted\",\"txn_id\":\"txn_000029\"}",
+            "duration_ms": 16
+          },
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/transfers",
+            "identity": "attacker",
+            "request_body": "{\"amount_minor\":100730,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-race-1795107055794740210\",\"to\":\"acc_mallory_2\"}",
+            "status": 200,
+            "response_body": "{\"amount_minor\":100730,\"status\":\"posted\",\"txn_id\":\"txn_000028\"}",
+            "duration_ms": 16
+          },
+          {
+            "method": "POST",
+            "url": "http://127.0.0.1:9900/v1/transfers",
+            "identity": "attacker",
+            "request_body": "{\"amount_minor\":100730,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-race-1795107055794494609\",\"to\":\"acc_mallory_2\"}",
+            "status": 200,
+            "response_body": "{\"amount_minor\":100730,\"status\":\"posted\",\"txn_id\":\"txn_000027\"}",
+            "duration_ms": 16
+          }
+        ]
+      },
+      "requests": 8
+    }
+  ],
+  "findings": [
+    {
+      "id": "LG-AUTHZ-READ-001",
+      "probe": "LG-AUTHZ-READ",
+      "title": "Cross-customer account read (BOLA)",
+      "severity": "high",
+      "invariant": "authority",
+      "cwe": "CWE-639",
+      "summary": "Attacker session read account acc_alice_1 owned by \"alice\", including a balance of ₹2500000.00.",
+      "violations": [
+        {
+          "invariant": "authority",
+          "detail": "account object returned to a non-owner identity"
+        }
+      ],
+      "exposure_minor_inr": 0,
+      "exposure": "Customer financial data (balances, identifiers) readable across tenants",
+      "remediation": "Enforce owner/tenant check on every object lookup server-side; return 404 for foreign objects; add an authorization test per object route.",
+      "controls": [
+        {
+          "framework": "OWASP API Top 10 (2023)",
+          "ref": "API1",
+          "title": "Broken Object Level Authorization"
+        },
+        {
+          "framework": "PCI DSS v4.0",
+          "ref": "7.2",
+          "title": "Access to system components and data is appropriately defined and assigned"
+        },
+        {
+          "framework": "RBI",
+          "ref": "Cyber Security Framework for Banks (2016)",
+          "title": "Baseline application security and access controls"
+        },
+        {
+          "framework": "DPDP Act 2023",
+          "ref": "Sec 8(5)",
+          "title": "Reasonable security safeguards to prevent personal data breach"
+        }
+      ],
+      "evidence": [
+        {
+          "method": "GET",
+          "url": "http://127.0.0.1:9900/v1/accounts/acc_alice_1",
+          "identity": "attacker",
+          "status": 200,
+          "response_body": "{\"id\":\"acc_alice_1\",\"owner\":\"alice\",\"currency\":\"INR\",\"balance_minor\":250000000}",
+          "duration_ms": 0
+        }
+      ]
+    },
+    {
+      "id": "LG-STEPUP-002",
+      "probe": "LG-STEPUP",
+      "title": "Step-up OTP attempt ceiling",
+      "severity": "high",
+      "invariant": "step_up_ceiling",
+      "cwe": "CWE-307",
+      "summary": "11 consecutive wrong OTPs were accepted for evaluation without lockout (last response HTTP 401). A 4-digit OTP space falls to ~10,000 requests.",
+      "violations": [
+        {
+          "invariant": "step_up_ceiling",
+          "detail": "no lockout after 11 failures"
+        }
+      ],
+      "exposure_minor_inr": 0,
+      "exposure": "Step-up authentication bypass on high-value actions (account takeover, beneficiary add)",
+      "remediation": "Lock the challenge after ≤5 failures, bind it to device/session, rate-limit per account and per IP, and alert on bursts.",
+      "controls": [
+        {
+          "framework": "PCI DSS v4.0",
+          "ref": "8.3.4",
+          "title": "Invalid authentication attempts are limited (lockout after not more than 10 attempts)"
+        },
+        {
+          "framework": "RBI",
+          "ref": "Master Direction on Digital Payment Security Controls (2021)",
+          "title": "Application security, transaction integrity and authentication controls for digital payment products"
+        },
+        {
+          "framework": "OWASP API Top 10 (2023)",
+          "ref": "API2",
+          "title": "Broken Authentication"
+        }
+      ],
+      "evidence": [
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/otp/challenge",
+          "identity": "attacker",
+          "request_body": "{}",
+          "status": 200,
+          "response_body": "{\"challenge_id\":\"otp_mallory_1795107055753944071\",\"delivery\":\"sms\"}",
+          "duration_ms": 0
+        },
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/otp/verify",
+          "identity": "attacker",
+          "request_body": "{\"challenge_id\":\"otp_mallory_1795107055753944071\",\"otp\":\"0013\"}",
+          "status": 401,
+          "response_body": "{\"error\":\"invalid otp\"}",
+          "duration_ms": 0
+        },
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/otp/verify",
+          "identity": "attacker",
+          "request_body": "{\"challenge_id\":\"otp_mallory_1795107055753944071\",\"otp\":\"7932\"}",
+          "status": 401,
+          "response_body": "{\"error\":\"invalid otp\"}",
+          "duration_ms": 0
+        },
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/otp/verify",
+          "identity": "attacker",
+          "request_body": "{\"challenge_id\":\"otp_mallory_1795107055753944071\",\"otp\":\"9203\"}",
+          "status": 401,
+          "response_body": "{\"error\":\"invalid otp\"}",
+          "duration_ms": 0
+        }
+      ]
+    },
+    {
+      "id": "LG-SIGN-003",
+      "probe": "LG-SIGN",
+      "title": "Negative-amount transfer pulls funds",
+      "severity": "critical",
+      "invariant": "authority",
+      "cwe": "CWE-20",
+      "summary": "A transfer of -₹1.00 from the attacker's account debited the victim by ₹1.00. Any customer balance can be drained by naming it as the destination.",
+      "violations": [
+        {
+          "invariant": "authority",
+          "detail": "victim account debited without victim's authority",
+          "currency": "INR",
+          "delta_minor": -100
+        }
+      ],
+      "exposure_minor_inr": 250000000,
+      "exposure": "Entire balance of any reachable account (victim test account alone: ₹2500000.00)",
+      "remediation": "Reject amount \u003c= 0 at the API edge and again in the posting engine; express transfers as unsigned amount + direction.",
+      "controls": [
+        {
+          "framework": "OWASP API Top 10 (2023)",
+          "ref": "API1",
+          "title": "Broken Object Level Authorization"
+        },
+        {
+          "framework": "PCI DSS v4.0",
+          "ref": "7.2",
+          "title": "Access to system components and data is appropriately defined and assigned"
+        },
+        {
+          "framework": "RBI",
+          "ref": "Cyber Security Framework for Banks (2016)",
+          "title": "Baseline application security and access controls"
+        },
+        {
+          "framework": "DPDP Act 2023",
+          "ref": "Sec 8(5)",
+          "title": "Reasonable security safeguards to prevent personal data breach"
+        }
+      ],
+      "evidence": [
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/transfers",
+          "identity": "attacker",
+          "request_body": "{\"amount_minor\":-100,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-sign-1795107055756857637\",\"to\":\"acc_alice_1\"}",
+          "status": 200,
+          "response_body": "{\"amount_minor\":-100,\"status\":\"posted\",\"txn_id\":\"txn_000001\"}",
+          "duration_ms": 15
+        }
+      ]
+    },
+    {
+      "id": "LG-ROUNDING-004",
+      "probe": "LG-ROUNDING",
+      "title": "FX rounding round-trip mints money",
+      "severity": "critical",
+      "invariant": "conservation",
+      "cwe": "CWE-682",
+      "summary": "10 INR→USD→INR round-trips of ₹0.01 created ₹8.40 that no GL absorbs (₹0.84 per trip). Rounding is applied in the customer's favour on both legs while treasury books the fair value.",
+      "violations": [
+        {
+          "invariant": "conservation",
+          "detail": "system total for INR moved by ₹0.10 with no external inflow",
+          "currency": "INR",
+          "delta_minor": 10
+        },
+        {
+          "invariant": "conservation",
+          "detail": "system total for USD moved by $0.10 with no external inflow",
+          "currency": "USD",
+          "delta_minor": 10
+        }
+      ],
+      "exposure_minor_inr": 168000000,
+      "exposure": "₹1680000.00/day if scripted at 2000000 conversions/day (salami attack)",
+      "remediation": "Round toward the bank on every leg, enforce a minimum conversion amount, book rounding residue to a dedicated GL and reconcile it daily.",
+      "controls": [
+        {
+          "framework": "PCI DSS v4.0",
+          "ref": "6.2.4",
+          "title": "Software engineering techniques prevent common attacks, including business-logic abuse via API manipulation"
+        },
+        {
+          "framework": "RBI",
+          "ref": "Master Direction on IT Governance, Risk, Controls \u0026 Assurance (2023)",
+          "title": "Application controls for data integrity, reconciliation and audit trails"
+        },
+        {
+          "framework": "RBI",
+          "ref": "Master Direction on Digital Payment Security Controls (2021)",
+          "title": "Application security, transaction integrity and authentication controls for digital payment products"
+        },
+        {
+          "framework": "OWASP API Top 10 (2023)",
+          "ref": "API6",
+          "title": "Unrestricted Access to Sensitive Business Flows"
+        }
+      ],
+      "evidence": [
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/fx/convert",
+          "identity": "attacker",
+          "request_body": "{\"amount_minor\":1,\"from_account\":\"acc_mallory_1\",\"to_account\":\"acc_mallory_usd\"}",
+          "status": 200,
+          "response_body": "{\"credited_minor\":1,\"currency\":\"USD\",\"txn_id\":\"txn_000002\"}",
+          "duration_ms": 0
+        },
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/fx/convert",
+          "identity": "attacker",
+          "request_body": "{\"amount_minor\":1,\"from_account\":\"acc_mallory_usd\",\"to_account\":\"acc_mallory_1\"}",
+          "status": 200,
+          "response_body": "{\"credited_minor\":84,\"currency\":\"INR\",\"txn_id\":\"txn_000003\"}",
+          "duration_ms": 0
+        }
+      ]
+    },
+    {
+      "id": "LG-IDEMPOTENCY-005",
+      "probe": "LG-IDEMPOTENCY",
+      "title": "Duplicate idempotency key double-posts",
+      "severity": "high",
+      "invariant": "idempotency",
+      "cwe": "CWE-362",
+      "summary": "Two in-flight requests with idempotency key \"lg-idem-1795107055777735743\" produced 2 distinct postings. Client retries (mobile network flaps, gateway timeouts) will double-debit customers.",
+      "violations": [
+        {
+          "invariant": "idempotency",
+          "detail": "2 postings for one key",
+          "currency": "INR",
+          "delta_minor": 100
+        }
+      ],
+      "exposure_minor_inr": 100,
+      "exposure": "Every retried payment is at risk of duplicate debit; customer-harm and chargeback exposure scales with retry rate",
+      "remediation": "Reserve the idempotency key atomically (unique insert) before executing, scope it to the caller, and bind it to a hash of the payload.",
+      "controls": [
+        {
+          "framework": "PCI DSS v4.0",
+          "ref": "6.2.4",
+          "title": "Software engineering techniques prevent common attacks, including business-logic abuse via API manipulation"
+        },
+        {
+          "framework": "RBI",
+          "ref": "Master Direction on Digital Payment Security Controls (2021)",
+          "title": "Application security, transaction integrity and authentication controls for digital payment products"
+        },
+        {
+          "framework": "RBI",
+          "ref": "Master Direction on IT Governance, Risk, Controls \u0026 Assurance (2023)",
+          "title": "Application controls for data integrity, reconciliation and audit trails"
+        },
+        {
+          "framework": "OWASP API Top 10 (2023)",
+          "ref": "API6",
+          "title": "Unrestricted Access to Sensitive Business Flows"
+        }
+      ],
+      "evidence": [
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/transfers",
+          "identity": "attacker",
+          "request_body": "{\"amount_minor\":100,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-idem-1795107055777735743\",\"to\":\"acc_mallory_2\"}",
+          "status": 200,
+          "response_body": "{\"amount_minor\":100,\"status\":\"posted\",\"txn_id\":\"txn_000023\"}",
+          "duration_ms": 16
+        },
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/transfers",
+          "identity": "attacker",
+          "request_body": "{\"amount_minor\":100,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-idem-1795107055777735743\",\"to\":\"acc_mallory_2\"}",
+          "status": 200,
+          "response_body": "{\"amount_minor\":100,\"status\":\"posted\",\"txn_id\":\"txn_000022\"}",
+          "duration_ms": 16
+        }
+      ]
+    },
+    {
+      "id": "LG-DOUBLESPEND-006",
+      "probe": "LG-DOUBLESPEND",
+      "title": "Concurrent transfers overdraw the source",
+      "severity": "critical",
+      "invariant": "non_negative",
+      "cwe": "CWE-362",
+      "summary": "6 of 6 concurrent transfers of the full balance (₹1007.30) posted. The source ended at -₹5036.50: the balance check and the debit are not atomic.",
+      "violations": [
+        {
+          "invariant": "non_negative",
+          "detail": "account acc_mallory_1 is overdrawn at -₹5036.50 with no overdraft facility",
+          "currency": "INR",
+          "delta_minor": -503650
+        }
+      ],
+      "exposure_minor_inr": 503650,
+      "exposure": "₹5036.50 overdrawn from a ₹1007.30 balance in one burst; scales linearly with concurrency and account count",
+      "remediation": "Debit with a conditional update (UPDATE … SET bal = bal - x WHERE bal \u003e= x) or a row lock inside the posting transaction; move fraud checks before the reservation, not between check and debit.",
+      "controls": [
+        {
+          "framework": "PCI DSS v4.0",
+          "ref": "6.2.4",
+          "title": "Software engineering techniques prevent common attacks, including business-logic abuse via API manipulation"
+        },
+        {
+          "framework": "RBI",
+          "ref": "Master Direction on Digital Payment Security Controls (2021)",
+          "title": "Application security, transaction integrity and authentication controls for digital payment products"
+        },
+        {
+          "framework": "RBI",
+          "ref": "Master Direction on IT Governance, Risk, Controls \u0026 Assurance (2023)",
+          "title": "Application controls for data integrity, reconciliation and audit trails"
+        },
+        {
+          "framework": "OWASP API Top 10 (2023)",
+          "ref": "API6",
+          "title": "Unrestricted Access to Sensitive Business Flows"
+        }
+      ],
+      "evidence": [
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/transfers",
+          "identity": "attacker",
+          "request_body": "{\"amount_minor\":100730,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-race-1795107055794634620\",\"to\":\"acc_mallory_2\"}",
+          "status": 200,
+          "response_body": "{\"amount_minor\":100730,\"status\":\"posted\",\"txn_id\":\"txn_000024\"}",
+          "duration_ms": 16
+        },
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/transfers",
+          "identity": "attacker",
+          "request_body": "{\"amount_minor\":100730,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-race-1795107055794596604\",\"to\":\"acc_mallory_2\"}",
+          "status": 200,
+          "response_body": "{\"amount_minor\":100730,\"status\":\"posted\",\"txn_id\":\"txn_000025\"}",
+          "duration_ms": 16
+        },
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/transfers",
+          "identity": "attacker",
+          "request_body": "{\"amount_minor\":100730,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-race-1795107055794508464\",\"to\":\"acc_mallory_2\"}",
+          "status": 200,
+          "response_body": "{\"amount_minor\":100730,\"status\":\"posted\",\"txn_id\":\"txn_000026\"}",
+          "duration_ms": 16
+        },
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/transfers",
+          "identity": "attacker",
+          "request_body": "{\"amount_minor\":100730,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-race-1795107055794606054\",\"to\":\"acc_mallory_2\"}",
+          "status": 200,
+          "response_body": "{\"amount_minor\":100730,\"status\":\"posted\",\"txn_id\":\"txn_000029\"}",
+          "duration_ms": 16
+        },
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/transfers",
+          "identity": "attacker",
+          "request_body": "{\"amount_minor\":100730,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-race-1795107055794740210\",\"to\":\"acc_mallory_2\"}",
+          "status": 200,
+          "response_body": "{\"amount_minor\":100730,\"status\":\"posted\",\"txn_id\":\"txn_000028\"}",
+          "duration_ms": 16
+        },
+        {
+          "method": "POST",
+          "url": "http://127.0.0.1:9900/v1/transfers",
+          "identity": "attacker",
+          "request_body": "{\"amount_minor\":100730,\"from\":\"acc_mallory_1\",\"idempotency_key\":\"lg-race-1795107055794494609\",\"to\":\"acc_mallory_2\"}",
+          "status": 200,
+          "response_body": "{\"amount_minor\":100730,\"status\":\"posted\",\"txn_id\":\"txn_000027\"}",
+          "duration_ms": 16
+        }
+      ]
+    }
+  ],
+  "requests": 50,
+  "request_budget": 400,
+  "exposure_minor_inr": 418503750,
+  "resilience_score": 0,
+  "grade": "F"
+}

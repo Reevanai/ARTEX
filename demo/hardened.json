@@ -1,0 +1,57 @@
+{
+  "target": "artex-bankrange",
+  "base_url": "http://127.0.0.1:9901",
+  "started_at": "2026-11-19T16:50:55.818650532Z",
+  "finished_at": "2026-11-19T16:50:55.82354601Z",
+  "authorization": "ENG-DEMO-001",
+  "results": [
+    {
+      "probe": "LG-AUTHZ-READ",
+      "title": "Cross-customer account read (BOLA)",
+      "passed": true,
+      "note": "victim account refused with HTTP 404",
+      "requests": 1
+    },
+    {
+      "probe": "LG-STEPUP",
+      "title": "Step-up OTP attempt ceiling",
+      "passed": true,
+      "note": "challenge locked after 5 failed attempts",
+      "requests": 6
+    },
+    {
+      "probe": "LG-SIGN",
+      "title": "Negative-amount transfer pulls funds",
+      "passed": true,
+      "note": "negative amount rejected with HTTP 400",
+      "requests": 3
+    },
+    {
+      "probe": "LG-ROUNDING",
+      "title": "FX rounding round-trip mints money",
+      "passed": true,
+      "note": "sub-unit conversions rejected or conserved",
+      "requests": 3
+    },
+    {
+      "probe": "LG-IDEMPOTENCY",
+      "title": "Duplicate idempotency key double-posts",
+      "passed": true,
+      "note": "duplicate submissions collapsed to one posting",
+      "requests": 3
+    },
+    {
+      "probe": "LG-DOUBLESPEND",
+      "title": "Concurrent transfers overdraw the source",
+      "passed": true,
+      "note": "1/6 concurrent full-balance transfers posted; balance never went negative",
+      "requests": 8
+    }
+  ],
+  "findings": null,
+  "requests": 25,
+  "request_budget": 400,
+  "exposure_minor_inr": 0,
+  "resilience_score": 100,
+  "grade": "A"
+}

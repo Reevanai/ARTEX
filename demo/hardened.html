@@ -1,0 +1,49 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LedgerGuard Report</title>
+<style>
+:root{--bg:#f7f7f8;--fg:#15161a;--mut:#5b5f6a;--card:#fff;--line:#e3e4e8;--crit:#c0262d;--high:#d9631e;--ok:#1f8a4c;--acc:#5b2fd1}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1014;--fg:#ececf1;--mut:#9aa0ad;--card:#181a20;--line:#2a2d36;--acc:#9d7bff}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:1040px;margin:0 auto;padding:28px 16px 64px}
+h1{font-size:26px;margin:0}h2{font-size:18px;margin:32px 0 12px}.mut{color:var(--mut)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:20px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}.kpi b{display:block;font-size:26px}
+.grade{font-size:40px!important;color:var(--acc)}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}th{color:var(--mut);font-weight:600}
+.sev{font-weight:700;font-size:12px;padding:2px 8px;border-radius:99px;color:#fff}.critical{background:var(--crit)}.high{background:var(--high)}.pass{background:var(--ok)}
+.f{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0}
+.f h3{margin:0 0 6px;font-size:16px}details{margin-top:10px}pre{white-space:pre-wrap;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px;max-height:280px;overflow:auto}
+.tag{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin:2px 4px 2px 0;font-size:12px}
+.wrap{overflow-x:auto}
+</style></head><body><main>
+<div class="mut">ARTEX · LedgerGuard money-invariant assurance</div>
+<h1>artex-bankrange</h1>
+<div class="mut">http://127.0.0.1:9901 · engagement <b>ENG-DEMO-001</b> · 2026-11-19 16:50:55 UTC</div>
+<div class="kpis">
+<div class="kpi"><span class="mut">Resilience grade</span><b class="grade">A</b><span class="mut">100/100</span></div>
+<div class="kpi"><span class="mut">Invariant breaks</span><b>0</b><span class="mut">of 6 probes</span></div>
+<div class="kpi"><span class="mut">Money at risk (modelled)</span><b>₹0.00</b></div>
+<div class="kpi"><span class="mut">Requests spent</span><b>25</b><span class="mut">budget 400</span></div>
+</div>
+
+<h2>Probe results</h2><div class="wrap"><table><tr><th>Probe</th><th>Check</th><th>Result</th><th>Notes</th><th>Req</th></tr>
+<tr><td><code>LG-AUTHZ-READ</code></td><td>Cross-customer account read (BOLA)</td>
+<td><span class="sev pass">PASS</span></td>
+<td>victim account refused with HTTP 404</td><td>1</td></tr><tr><td><code>LG-STEPUP</code></td><td>Step-up OTP attempt ceiling</td>
+<td><span class="sev pass">PASS</span></td>
+<td>challenge locked after 5 failed attempts</td><td>6</td></tr><tr><td><code>LG-SIGN</code></td><td>Negative-amount transfer pulls funds</td>
+<td><span class="sev pass">PASS</span></td>
+<td>negative amount rejected with HTTP 400</td><td>3</td></tr><tr><td><code>LG-ROUNDING</code></td><td>FX rounding round-trip mints money</td>
+<td><span class="sev pass">PASS</span></td>
+<td>sub-unit conversions rejected or conserved</td><td>3</td></tr><tr><td><code>LG-IDEMPOTENCY</code></td><td>Duplicate idempotency key double-posts</td>
+<td><span class="sev pass">PASS</span></td>
+<td>duplicate submissions collapsed to one posting</td><td>3</td></tr><tr><td><code>LG-DOUBLESPEND</code></td><td>Concurrent transfers overdraw the source</td>
+<td><span class="sev pass">PASS</span></td>
+<td>1/6 concurrent full-balance transfers posted; balance never went negative</td><td>8</td></tr>
+</table></div>
+
+
+<p class="mut" style="margin-top:32px">Control mappings are indicative and must be validated by the bank's compliance function. LedgerGuard used only designated test identities and accounts within the declared scope.</p>
+</main></body></html>
